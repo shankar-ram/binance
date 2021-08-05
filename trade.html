@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <h1>Full trade</h1>
+    <form action="/fulltrade" method="POST">
+        <label for="quantity">Selling Quantity:</label><br><br>
+        <input required type="number" id="quantity" name="quantity" step="any"><br><br>
+        <label for="price">Selling Price:</label><br><br>
+        <input  type="number" id="price" name="price" step="any"><br><br>
+        
+        <label >Mode:</label><br><br>
+        <input required list="mode" name="mode">
+        <datalist id="mode" >
+            <option value="buy">
+            <option value="sell">
+        </datalist><br><br>
+
+        <button type="submit" >Continue transaction</button>
+
+        <button formaction="/submitorder">Submit transaction</button>
+    </form><br><br>
+
+    <form>
+        
+      </form>
+
+    
+</body>
+</html>

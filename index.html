@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <h1>Full Trade</h1>
+    <br>
+    <br>
+    <form action="/order" method="POST">
+        
+        <label for="quantity">Quantity:</label><br><br>
+        <input required type="number" id="quantity" name="quantity" step="any"><br><br>
+        <label for="price">Price:</label><br><br>
+        <input  type="number" id="price" name="price" step="any"><br><br>
+        
+        <label >Symbol:</label><br><br>
+        <input required list="pair"  name="pair">
+        <datalist id="pair">
+            <option value="BNBUSDT">
+            <option value="BTCUSDT">
+        </datalist><br><br>
+        <label >Type:</label><br><br>
+        <input required list="type" name="type">
+        <datalist id="type" >
+            <option value="LIMIT">
+            <option value="MARKET">
+        </datalist><br><br>
+        <label >Mode:</label><br><br>
+        <input required list="mode" name="mode">
+        <datalist id="mode" >
+            <option value="buy">
+            <option value="sell">
+        </datalist><br><br>
+        <button type="submit">Continue Trading</button>
+          
+
+    </form>
+</body>
+</html>
