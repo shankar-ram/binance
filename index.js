@@ -69,8 +69,6 @@ app.get("/depth",(req,res)=>{
 //------------------------First buy order----------------------------
 app.post("/order",(req,res)=>{
    
-    
-
     let quantity=req.body.quantity , price=req.body.price, type=req.body.type, pair=req.body.pair ,mode=req.body.mode;
     console.log(quantity,price,pair,type,mode);
 
@@ -108,8 +106,8 @@ app.post("/order",(req,res)=>{
                     
                     console.log(filtered[i].filters[1].multiplierDown, filtered[i].filters[1].multiplierUp);
                     
-                    if(price>(filtered[i].filters[1].multiplierUp)*currPrice || price<(filtered[i].filters[1].multiplierDown)*currPrice){
-                        console.log("Enter the proper range between "+currPrice*(filtered[i].filters[1].multiplierUp) +" and "+currPrice*(filtered[i].filters[1].multiplierDown));
+                    if((price>(filtered[i].filters[1].multiplierUp)*currPrice || price<(filtered[i].filters[1].multiplierDown)*currPrice) && type=="LIMIT"){
+                        console.log("Enter the proper range between "+currPrice*(filtered[i].filters[1].multiplierDown +" and "+currPrice*(filtered[i].filters[1].multiplierUp) ));
                         return;
                     }
                     quotingAsset=filtered[i].quoteAsset;
@@ -128,47 +126,80 @@ app.post("/order",(req,res)=>{
                             assetValue=value.available;
                         }
                 );
-              var orderid = '';
-                if(assetValue-price>=0){
-                    if(type=="LIMIT" && mode=="buy"){
+              var orderid='' ;
+                if( type=="LIMIT" && mode=="buy"){
+                    if(assetValue-price>=0){
                        var ans = await binance.buy(pair, quantity, price, {type:type}) 
-                    console.log("Ans is",ans.orderId);
-                    orderid = ans.orderId
+                       console.log("Ans is",ans.orderId);
+                        orderid = ans.orderId
+
+                    con.query('INSERT INTO trade SET ?',{type:type, quantity: quantity, price:price, pair:pair, mode:mode,orderId:orderid,orderStatus:"PENDING" },function(error,entry){
+                        if(error){
+                          console.log(error);
+                        }
+                        else{
+                          console.log("entry is",entry);
+                        }
+                        
+                      } 
+                      );
+
+                      con.query('Select assigned_no From trade WHERE price=? AND quantity=? AND type=? AND pair=? AND mode=? AND orderId=? AND orderStatus=? ',[price,quantity,type,pair,mode,orderid,"PENDING"],function(error,results){
+                        if(error){
+                            console.log(error);
+                          }
+                          else{
+                              if(results.length >0){
+                                console.log((results[0].assigned_no));
+                                res.send({"assigned_no":results[0].assigned_no,"order_id":orderid,"purchased_quantity":quantity})
+                              }
+                              else  
+                                console.log("Error");
+                           
+                        }
+               
+                      });
                    }
-                     else if(type=="MARKET" && mode=="buy"){
-                        var ans = await binance.buy(pair, quantity, price, {type:type}) 
+                   else
+                    console.log("Not enough wallet balance")
+                }   
+                else if(type=="MARKET" && mode=="buy"){
+                    if(assetValue-currPrice>=0){
+                        var ans = await binance.marketBuy(pair, quantity) 
                         console.log("Ans is",ans.orderId);
                         orderid = ans.orderId
-                    }
-                    con.query('INSERT INTO trade SET ?',{type:type, quantity: quantity, price:price, pair:pair, mode:mode,orderId:orderid,orderStatus:"PENDING" },function(error,entry){
-                    if(error){
-                      console.log(error);
-                    }
-                    else{
-                      console.log(entry);
-                    }
-                  } 
-                  );
-                  con.query('Select assigned_no From trade WHERE price=? AND quantity=? AND type=? AND pair=? AND mode=? AND orderId=? AND orderStatus=? ',[price,quantity,type,pair,mode,orderid,"PENDING"],function(error,results){
-                    if(error){
-                        console.log(error);
-                      }
-                      else{
-                        console.log((results[0].assigned_no));
-                        res.send({"assigned_no":results[0].assigned_no,"order_id":orderid,"purchased_quantity":quantity})
-                    }
-           
-                  });
+                        con.query('INSERT INTO trade SET ?',{type:type, quantity: quantity, price:currPrice, pair:pair, mode:mode,orderId:orderid,orderStatus:"PENDING" },function(error,entry){
+                            if(error){
+                              console.log(error);
+                            }
+                            else{
+                              console.log(entry);
+                            }
+                          } 
+                          );
+                          con.query('Select assigned_no From trade WHERE price=? AND quantity=? AND type=? AND pair=? AND mode=? AND orderId=? AND orderStatus=? ',[currPrice,quantity,type,pair,mode,orderid,"PENDING"],function(error,results){
+                            if(error){
+                                console.log(error);
+                              }
+                              else{
+                                  if(results.length>0){
+                                    console.log((results[0].assigned_no));
+                                    res.send({"assigned_no":results[0].assigned_no,"order_id":orderid,"purchased_quantity":quantity})
+                                  }
+                                  else
+                                    console.log("Error");
+                                
+                            }
                    
-                }   
+                          });
+                    }
+                    else
+                        console.log("Not enough wallet balance")   ;
+                }
+                
             });
-        
    
         })
-        
-   
-   
-    
     }
     exch();
    
@@ -198,19 +229,19 @@ app.post("/fulltrade",(req,res)=>{
         }
 
         if(mode=="sell"){
-            binance.balance((error, balances) => {
-                if ( error ) return console.error(error);
-                // console.info("balances()", balances);
-                Object.entries(balances).forEach(
-                    ([key, value]) =>{
-                        if(key==sellingAsset){
-                            console.log(key, value.available)}
-                            assetValue=value.available;
-                        }
-                );
-              
+            //binance.balance((error, balances) => {
+                //if ( error ) return console.error(error);
+                // //console.info("balances()", balances);
+               // Object.entries(balances).forEach(
+                    //([key, value]) =>{
+                        //if(key==sellingAsset){
+                            //console.log(key, value.available)}
+                           // assetValue=value.available;
+                       // }
+                //);
+                
                 if(purchased_quantity-quantity>=0){
-                    con.query('INSERT INTO cont SET ?',{assigned_no:assigned_no, price:price, quantity: quantity,mode:mode },function(error,entry){
+                    con.query('INSERT INTO cont SET ?',{assigned_no:assigned_no, type:type,price:price, quantity: quantity,mode:mode },function(error,entry){
                     if(error){
                       console.log(error);
                     }
@@ -225,7 +256,8 @@ app.post("/fulltrade",(req,res)=>{
                     console.log("Cannot sell more than you have");
                     return;
                 }   
-            });
+            
+            //});
         }
     })    
 })
@@ -250,19 +282,19 @@ app.post("/submitorder",(req,res)=>{
         }
     
         if(mode=="sell"){
-            binance.balance((error, balances) => {
-                if ( error ) return console.error(error);
-                // console.info("balances()", balances);
-                Object.entries(balances).forEach(
-                    ([key, value]) =>{
-                        if(key==sellingAsset){
-                            console.log(key, value.available)}
-                            assetValue=value.available;
-                        }
-                );
+            // binance.balance((error, balances) => {
+            //     if ( error ) return console.error(error);
+            //     // console.info("balances()", balances);
+            //     Object.entries(balances).forEach(
+            //         ([key, value]) =>{
+            //             if(key==sellingAsset){
+            //                 console.log(key, value.available)}
+            //                 assetValue=value.available;
+            //             }
+            //     );
               
                 if(purchased_quantity-quantity>=0){
-                    con.query('INSERT INTO cont SET ?',{assigned_no:assigned_no, price:price, quantity: quantity,mode:mode },function(error,entry){
+                    con.query('INSERT INTO cont SET ?',{assigned_no:assigned_no, type:type, price:price, quantity: quantity,mode:mode },function(error,entry){
                     if(error){
                       console.log(error);
                     }
@@ -277,7 +309,7 @@ app.post("/submitorder",(req,res)=>{
                     console.log("Cannot sell more than you have");
                     return;
                 }        
-            });
+            //});
         }
         })
 
@@ -289,11 +321,11 @@ app.get("/transaction/:info",(req,res)=>{
 
     let info=req.params.info;
     var arr=info.split(",");
-    let type=arr[3];
-    let pair=arr[2];
-    let assigned_no=arr[0];
     let count;
     let orderid = arr[1];
+    let assigned_no=arr[0];
+    let pair=arr[2];
+    let type=arr[3];
     var a=[];
     console.log(info,type,assigned_no,orderid);
 
@@ -329,25 +361,44 @@ app.get("/transaction/:info",(req,res)=>{
                         
                         console.log(results[i].price,results[i].quantity,results[i].trans_no);
                         a.push(results[i].trans_no);
-                        binance.sell(pair, results[i].quantity, results[i].price, {type:type}, (error, response) => {
-                            console.info("Limit sell response", response);
-                            console.info("order id: " + response.orderId);
-                            
-                            con.query('UPDATE cont SET orderId=? , orderStatus=? WHERE trans_no=? AND assigned_no=? AND orderId=?',[response.orderId,"PENDING",a[i],assigned_no,"NULL"],(err,results)=>{
-                                if(err)
-                                    console.log(err);
-                                console.log(results);
-                                return;
-                            })
-
-
-                          });
+                        if(type=="LIMIT"){
+                            binance.sell(pair, results[i].quantity, results[i].price, {type:type}, (error, response) => {
+                                console.info("Limit sell response", response);
+                                console.info("order id: " + response.orderId);
+                                
+                                con.query('UPDATE cont SET orderId=? , orderStatus=? WHERE trans_no=? AND assigned_no=? AND orderId=?',[response.orderId,"PENDING",a[i],assigned_no,"NULL"],(err,results)=>{
+                                    if(err)
+                                        console.log(err);
+                                    console.log(results);
+                                    return;
+                                })
+    
+    
+                              });
+                        }
+                        else if(type=="MARKET"){
+                            binance.marketSell(pair, results[i].quantity, results[i].price, (error, response) => {
+                                console.info("Limit sell response", response);
+                                console.info("order id: " + response.orderId);
+                                
+                                con.query('UPDATE cont SET orderId=? , orderStatus=? WHERE trans_no=? AND assigned_no=? AND orderId=?',[response.orderId,"PENDING",a[i],assigned_no,"NULL"],(err,results)=>{
+                                    if(err)
+                                        console.log(err);
+                                    console.log(results);
+                                    return;
+                                })
+    
+    
+                              });
+                        }
+                        
                     }
                 })
                 })
             }
             else{
-                console.log("Status hasnt been fulfilled yet");
+                console.log("Status hasn't been fulfilled yet");
+                res.send("Status hasn't been fulfilled yet");
                
             }
         });
@@ -367,7 +418,7 @@ app.get("/sold",(req,res)=>{
        
         for(var i=0;i<results.length;i++){
             
-            binance.orderStatus("BNBUSDT",results[i].orderId,(err,orderStatus,symbol)=>{
+            binance.orderStatus(results[i].pair,results[i].orderId,(err,orderStatus,symbol)=>{
                 console.log(symbol+" order status: "+orderStatus.status);
             
             if(orderStatus.status=="FILLED"){
